@@ -64,7 +64,7 @@ def createKeys():
     # Enter prime numbers p and q to calculate N and φ(N)
     invalid = True
     while invalid:
-        print("Only enter prime numbers less than 1000 and are not equal")
+        print("Enter two prime numbers that are less than a thousand and not equal")
         print("p = ", end="")
         p = int(input())
         print("q = ", end="")
