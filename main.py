@@ -1,4 +1,16 @@
 import math
+import threading
+import time
+
+
+def waiting():
+    t = threading.current_thread()
+    animation = "|/-\\"
+    idx = 0
+    while getattr(t, "do_run", True):
+        print(animation[idx % len(animation)], end="\r")
+        idx += 1
+        time.sleep(0.1)
 
 
 # A function to print all prime factors of a given number n
@@ -269,10 +281,15 @@ def decrypt():
     data_encrypted = f1.read().split(" ")
     f1.close
 
+    t = threading.Thread(target=waiting)
+    t.start()
+
     # Decrypt to ascii
     data_as_ascii = []
     for value in data_encrypted:
         data_as_ascii.append(str(pow(int(value), d) % N))
+
+    t.do_run = False
 
     # Convert back to string
     data_decrypted = conv_str(data_as_ascii)
@@ -290,6 +307,100 @@ def decrypt():
     print("Success")
 
 
+def brute_force():
+    # Open file containing public key
+    invalid = True
+    while invalid:
+        print("Choose a file containing the public key (default public.txt): ", end="")
+        filename = input()
+        if filename == "":
+            filename = "public.txt"
+
+        try:
+            f = open(filename, "r")
+            invalid = False
+            print("File found")
+        except FileNotFoundError:
+            print("File not found")
+
+    # Extract public key
+    e = int(f.readline().strip().split("e = ")[1])
+    N = int(f.readline().strip().split("N = ")[1])
+    f.close
+
+    p = 0
+    q = 0
+
+    # Obtain p and q
+    for i in range(2, N):
+        if N % i == 0:
+            p = i
+            q = int(N / i)
+            break
+
+    if p == 0 or q == 0:
+        return print("Could not find p and q")
+
+    phi = (p - 1) * (q - 1)
+
+    # Calculate decryption exponent d using the extended euclidean algorithm
+    # e * d + k * φ(N) = GCT(a,b) = 1
+    d = ext_gcd(e, phi)[1]
+
+    # A negative encryption exponent won't work
+    # Adding φ(N) doesn't change the result
+    if d < 0 and (d + phi > 0):
+        d += phi
+
+    print("p =", str(p))
+    print("q =", str(q))
+    print("φ(N) =", str(phi))
+    print("d =", str(d))
+
+    # Open file containing encrypted message
+    invalid = True
+    while invalid:
+        print("Choose a file to decrypt (default encrypted.txt): ", end="")
+        filename = input()
+        if filename == "":
+            filename = "encrypted.txt"
+
+        try:
+            f = open(filename, "r")
+            invalid = False
+        except FileNotFoundError:
+            print("File not found")
+
+    # Get encrypted data
+    data_encrypted = f.read().split(" ")
+    f.close
+
+    t = threading.Thread(target=waiting)
+    t.start()
+
+    # Decrypt to ascii
+    data_as_ascii = []
+    for value in data_encrypted:
+        data_as_ascii.append(str(pow(int(value), d) % N))
+
+    t.do_run = False
+
+    # Convert back to string
+    data_decrypted = conv_str(data_as_ascii)
+    print(data_decrypted)
+
+    # Save into file
+    print("Choose a file to save decrypted message (default decrypted.txt): ", end="")
+    filename = input()
+    if filename == "":
+        filename = "decrypted.txt"
+
+    f = open(filename, "w")
+    f.write(data_decrypted)
+    f.close
+    print("Success")
+
+
 #################################
 ########### CONSOLE #############
 #################################
@@ -298,7 +409,8 @@ while True:
     print("1) Create keys")
     print("2) Encrypt")
     print("3) Decrypt")
-    print("4) Exit (default)")
+    print("4) Brute Force")
+    print("5) Exit (default)")
 
     print("Enter a number: ", end="")
     option = input()
@@ -312,6 +424,9 @@ while True:
 
         case "3":
             decrypt()
+
+        case "4":
+            brute_force()
 
         case _:
             raise SystemExit(0)
